@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f6f2;
+  --surface: #ffffff;
+  --foreground: #1d2522;
+  --muted: #5d6a65;
+  --border: #e3e1d9;
+  --primary: #1f7a5a;
+  --primary-soft: #e3f1ea;
+  --great: #1f7a5a;
+  --good: #3d8fd1;
+  --fair: #a0811c;
+  --poor: #c2543c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-great: var(--great);
+  --color-good: var(--good);
+  --color-fair: var(--fair);
+  --color-poor: var(--poor);
+  /* 端末に入っている日本語フォントを使う（外部フォントを読み込まない） */
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", Meiryo, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #121614;
+    --surface: #1b211e;
+    --foreground: #e9eeeb;
+    --muted: #9fb0a8;
+    --border: #2d3631;
+    --primary: #4cc093;
+    --primary-soft: #1d3a2f;
+    --great: #4cc093;
+    --good: #6ab2ec;
+    --fair: #d7b44a;
+    --poor: #ec8a72;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.75;
+  font-feature-settings: "palt";
+}
