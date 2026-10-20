@@ -1,0 +1,38 @@
+{
+  "name": "miraigikai-sagamihara",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "ingest:members": "tsx scripts/ingest-members.ts",
+    "ingest:questions": "tsx scripts/ingest-questions.ts",
+    "ingest:bills": "tsx scripts/ingest-bills.ts",
+    "typecheck": "tsc --noEmit",
+    "sync:legislations": "tsx scripts/sync-legislations.ts",
+    "sync:chairs": "tsx scripts/sync-chairs.ts",
+    "recompute:scores": "tsx scripts/recompute-scores.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^18.0.8",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "unpdf": "^1.9.0"
+  }
+}
