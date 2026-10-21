@@ -128,3 +128,16 @@ npm run ingest:questions -- --latest    # 最新の定例会議の一般質問
 ## 正副議長の追加（手動）
 
 新しい議長・副議長が選ばれたら `data/chairs.json` に1行（役職と名前）足して `npm run sync:chairs` を実行します。
+
+## 議案書が画像だけの PDF のとき
+
+紙をスキャンした PDF は文字を読み取れないため、`ingest:bills` は「画像だけの PDF」と表示して飛ばします。
+その場合は、本会議の会議録にある「提案理由の説明」から要約できます。
+
+```bash
+npm run ingest:bills-minutes -- --council=1019 --numbers=14-37 --dry-run   # 使う説明文を確認
+npm run ingest:bills-minutes -- --council=1019 --numbers=14-37             # 取り込み
+npm run ingest:bills -- --since=2026 --only=results                       # 審議結果を反映
+```
+
+`--council` は会議録検索システムの会議番号（`ingest:questions -- --dry-run` の表示などで確認）、`--numbers` は議案番号です。
