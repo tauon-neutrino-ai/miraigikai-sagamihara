@@ -148,7 +148,7 @@ function promptBatches(text: string): string[] {
 const BillsSummary = z.object({
   bills: z.array(
     z.object({
-      kind: z.enum(["市長提出", "議員提出", "委員会提出"]).describe("「議案第N号」は市長提出、「議提議案第N号」は議員提出"),
+      kind: z.enum(["市長提出", "議員提出", "委員会提出"]).describe("「議案第N号」は市長提出、「議提議案第N号」は議員提出、「委員会提出議案第N号」は委員会提出"),
       number: z.number().int(),
       title: z.string().describe("議案の正式な件名"),
       category: z.enum(["条例", "予算", "決算", "人事", "契約・財産", "意見書・決議", "その他"]),
@@ -237,7 +237,7 @@ async function ingestBills(since: number, opts: Opts) {
         normalizeSessionName(sec.heading) ??
         sec.links.map((l) => normalizeSessionName(l.text)).find(Boolean) ??
         null;
-      const billLinks = sec.links.filter((l) => /^(議案第|議提議案第)/.test(toHankaku(l.text)) && !seenPdf.has(l.url));
+      const billLinks = sec.links.filter((l) => /^(議案第|議提議案第|委員会提出議案第)/.test(toHankaku(l.text)) && !seenPdf.has(l.url));
       const year = mostCommon(billLinks.map((l) => fileYear(l.url))) ?? yearFromLabel(sec.heading);
       if (!name || !year || year < since || billLinks.length === 0) continue;
       billLinks.forEach((l) => seenPdf.add(l.url));
@@ -253,6 +253,11 @@ async function ingestBills(since: number, opts: Opts) {
             if (done.length) continue;
           }
           const { text, hash } = await pdfText(link.url);
+          // 紙をスキャンした画像だけの PDF は文字が取れないので、AI を呼ばずに知らせる
+          if (text.replace(/\s/g, "").length < 300) {
+            console.warn(`  ! ${link.text}: 画像だけの PDF で文字を読み取れないため、取り込めません（${link.url}）`);
+            continue;
+          }
           const batches = promptBatches(text);
           let count = 0;
           for (const batch of batches) {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { QuestionCard } from "@/components/question-card";
-import { Badge, Card, EmptyState, ResultBadge } from "@/components/ui";
+import { Badge, Card, EmptyState, ResultBadge, billLabel } from "@/components/ui";
 import { SITE_NAME } from "@/lib/constants";
 import { getBills, getMembers, getQuestions } from "@/lib/data";
 
@@ -50,7 +50,7 @@ export default async function Home() {
                 <Link href={`/bills/${b.id}`} className="block h-full rounded-xl border border-border bg-surface p-4 hover:border-primary">
                   <div className="flex items-center gap-1.5 text-xs">
                     <Badge tone={b.bill_kind === "市長提出" ? "neutral" : "primary"}>
-                      {b.bill_kind === "市長提出" ? `議案第${b.number}号` : `議提議案第${b.number}号`}
+                      {billLabel(b)}
                     </Badge>
                     <span className="ml-auto">
                       <ResultBadge result={b.result} />
