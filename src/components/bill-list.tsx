@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { FIELDS } from "@/lib/constants";
 import type { Bill } from "@/lib/types";
-import { Badge, FieldTag, ResultBadge } from "./ui";
+import { Badge, FieldTag, ResultBadge, billLabel } from "./ui";
 
 const KINDS = ["すべて", "市長提出", "議員提出"] as const;
 
@@ -86,7 +86,7 @@ export function BillList({ bills }: { bills: Bill[] }) {
                   >
                     <div className="flex flex-wrap items-center gap-1.5 text-xs">
                       <Badge tone={b.bill_kind === "市長提出" ? "neutral" : "primary"}>
-                        {b.bill_kind === "市長提出" ? `議案第${b.number}号` : `議提議案第${b.number}号`}
+                        {billLabel(b)}
                       </Badge>
                       {b.category && <Badge>{b.category}</Badge>}
                       <span className="ml-auto">

@@ -85,3 +85,10 @@ export function formatDate(d: string | null | undefined): string {
   return `${y}年${m}月${day}日`;
 }
 
+
+/** 議案番号の表示（議案第N号 / 議提議案第N号 / 委員会提出議案第N号） */
+export function billLabel(b: { bill_kind: string; number: number }): string {
+  if (b.bill_kind === "議員提出") return `議提議案第${b.number}号`;
+  if (b.bill_kind === "委員会提出") return `委員会提出議案第${b.number}号`;
+  return `議案第${b.number}号`;
+}

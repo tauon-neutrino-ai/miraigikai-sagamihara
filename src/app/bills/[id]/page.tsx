@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { BackLink, Badge, Card, FieldTag, ResultBadge, formatDate } from "@/components/ui";
+import { BackLink, Badge, Card, FieldTag, ResultBadge, formatDate, billLabel } from "@/components/ui";
 import { getBill } from "@/lib/data";
 
 export async function generateMetadata({ params }: PageProps<"/bills/[id]">): Promise<Metadata> {
@@ -30,7 +30,7 @@ async function BillDetail({ params }: { params: Promise<{ id: string }> }) {
       <header>
         <div className="flex flex-wrap items-center gap-1.5 text-sm">
           <Badge tone={bill.bill_kind === "市長提出" ? "neutral" : "primary"}>
-            {bill.bill_kind === "市長提出" ? `議案第${bill.number}号` : `議提議案第${bill.number}号`}（{bill.bill_kind}）
+            {billLabel(bill)}（{bill.bill_kind}）
           </Badge>
           {bill.category && <Badge>{bill.category}</Badge>}
           {bill.session && <span className="text-muted">{bill.session.label}</span>}
