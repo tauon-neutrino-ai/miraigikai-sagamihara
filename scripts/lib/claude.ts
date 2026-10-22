@@ -37,6 +37,21 @@ export async function generateStructured<T extends z.ZodType>(opts: {
   prompt: string;
   schema: T;
 }): Promise<z.infer<T>> {
+  // まれに中身のないエラーが返ることがあるので、利用上限以外の失敗は1回だけやり直す
+  try {
+    return await generateOnce(opts);
+  } catch (e) {
+    if (e instanceof UsageLimitError) throw e;
+    console.warn(`  ! AI の呼び出しに失敗したのでやり直します（${(e as Error).message.slice(0, 80)}）`);
+    return generateOnce(opts);
+  }
+}
+
+async function generateOnce<T extends z.ZodType>(opts: {
+  system: string;
+  prompt: string;
+  schema: T;
+}): Promise<z.infer<T>> {
   const args = [
     "-p",
     "--model", MODEL,
