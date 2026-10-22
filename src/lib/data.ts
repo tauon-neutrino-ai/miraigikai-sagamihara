@@ -2,7 +2,19 @@
 import { cacheLife } from "next/cache";
 import type { Field } from "./constants";
 import { getSupabase } from "./supabase";
-import type { Bill, GeneralQuestion, Legislation, Member, MemberStats, MemberWithStats, Position } from "./types";
+import { sortSessionsDesc } from "./sessions";
+import type {
+  Bill,
+  GeneralQuestion,
+  Legislation,
+  Member,
+  MemberStats,
+  MemberWithStats,
+  Position,
+  Session,
+  SessionDigest,
+  SessionSummary,
+} from "./types";
 
 const BILL_COLUMNS =
   "id, session_id, bill_kind, number, year, title, category, summary, background, key_points, impact, fields, result, decided_on, source_url, session:sessions(label, year, name)";
@@ -135,5 +147,68 @@ export async function getMemberDetail(id: number): Promise<{
       const leader = l.leaders.find((x) => x.member.id === id);
       return leader ? [{ ...l, role: leader.role }] : [];
     }),
+  };
+}
+
+/** まとめページ用: 議案・質問が1件以上ある会議の一覧（新しい順） */
+export async function getSessionSummaries(): Promise<SessionSummary[]> {
+  "use cache";
+  cacheLife("hours");
+  const sb = getSupabase();
+  if (!sb) return [];
+  const [sessions, bills, questions, digests] = await Promise.all([
+    sb.from("sessions").select("id, year, name, label, start_date"),
+    sb.from("bills").select("session_id"),
+    sb.from("general_questions").select("session_id"),
+    sb.from("session_digests").select("session_id, kind, headline"),
+  ]);
+  if (sessions.error) fail("sessions", sessions.error);
+  if (bills.error) fail("bills", bills.error);
+  if (questions.error) fail("questions", questions.error);
+  if (digests.error) fail("session_digests", digests.error);
+  const count = (rows: { session_id: number | null }[], id: number) => rows.filter((r) => r.session_id === id).length;
+  return sortSessionsDesc(sessions.data as Session[])
+    .map((s) => ({
+      ...s,
+      billCount: count(bills.data, s.id),
+      questionCount: count(questions.data, s.id),
+      digests: (digests.data as { session_id: number; kind: "議案" | "質問"; headline: string }[])
+        .filter((d) => d.session_id === s.id)
+        .map(({ kind, headline }) => ({ kind, headline })),
+    }))
+    .filter((s) => s.billCount > 0 || s.questionCount > 0);
+}
+
+/** まとめページ用: 1つの会議のまとめと、リンク先の議案・質問 */
+export async function getSessionDetail(id: number): Promise<{
+  session: Session;
+  digests: SessionDigest[];
+  bills: Pick<Bill, "id" | "bill_kind" | "number" | "title" | "result">[];
+  questions: Pick<GeneralQuestion, "id" | "question_type" | "title" | "member">[];
+} | null> {
+  "use cache";
+  cacheLife("hours");
+  const sb = getSupabase();
+  if (!sb) return null;
+  const [session, digests, bills, questions] = await Promise.all([
+    sb.from("sessions").select("id, year, name, label, start_date").eq("id", id).maybeSingle(),
+    sb.from("session_digests").select("kind, headline, overview, items, updated_at").eq("session_id", id),
+    sb.from("bills").select("id, bill_kind, number, title, result").eq("session_id", id).order("number"),
+    sb
+      .from("general_questions")
+      .select("id, question_type, title, member:members(id, display_name, faction)")
+      .eq("session_id", id)
+      .order("meeting_date"),
+  ]);
+  if (session.error) fail("session", session.error);
+  if (digests.error) fail("session_digests", digests.error);
+  if (bills.error) fail("session bills", bills.error);
+  if (questions.error) fail("session questions", questions.error);
+  if (!session.data) return null;
+  return {
+    session: session.data as Session,
+    digests: digests.data as SessionDigest[],
+    bills: bills.data as Pick<Bill, "id" | "bill_kind" | "number" | "title" | "result">[],
+    questions: questions.data as unknown as Pick<GeneralQuestion, "id" | "question_type" | "title" | "member">[],
   };
 }

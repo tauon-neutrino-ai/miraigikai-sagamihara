@@ -141,3 +141,16 @@ npm run ingest:bills -- --since=2026 --only=results                       # 審�
 ```
 
 `--council` は会議録検索システムの会議番号（`ingest:questions -- --dry-run` の表示などで確認）、`--numbers` は議案番号です。
+
+## 会議のまとめ（手動）
+
+議案・質問を取り込んだあと、会議ごとの「まとめ」（重要な議案と、複数の議員が取り上げた論点）を作ります。
+
+```bash
+npm run digest -- --all                          # まとめが古い・ない会議をすべて
+npm run digest -- --year=2026 --name=6月定例会議   # 1つの会議だけ
+npm run digest -- --latest --preview             # 保存せずに試す
+```
+
+元の要約が変わっていなければ AI を呼ばずに飛ばします。初めて使うときは、Supabase の SQL Editor で
+`supabase/migrations/20261022000000_session_digests.sql` を実行しておいてください。
