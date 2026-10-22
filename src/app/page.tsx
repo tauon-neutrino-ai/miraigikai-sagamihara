@@ -2,10 +2,11 @@ import Link from "next/link";
 import { QuestionCard } from "@/components/question-card";
 import { Badge, Card, EmptyState, ResultBadge, billLabel } from "@/components/ui";
 import { SITE_NAME } from "@/lib/constants";
-import { getBills, getMembers, getQuestions } from "@/lib/data";
+import { getBills, getMembers, getQuestions, getSessionSummaries } from "@/lib/data";
 
 export default async function Home() {
-  const [bills, questions, members] = await Promise.all([getBills(), getQuestions(), getMembers()]);
+  const [bills, questions, members, sessions] = await Promise.all([getBills(), getQuestions(), getMembers(), getSessionSummaries()]);
+  const digested = sessions.filter((s) => s.digests.length > 0).slice(0, 2);
   const latestSession = bills[0]?.session?.label;
   const latestBills = bills.filter((b) => b.session?.label === latestSession).slice(0, 6);
   const latestQuestions = questions.slice(0, 5);
@@ -33,6 +34,33 @@ export default async function Home() {
           </Link>
         </div>
       </section>
+
+      {digested.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-xl font-bold">最近の会議のまとめ</h2>
+            <Link href="/sessions" className="text-sm text-primary">
+              すべて見る →
+            </Link>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {digested.map((s) => (
+              <li key={s.id}>
+                <Link href={`/sessions/${s.id}`} className="block h-full rounded-xl border border-border bg-surface p-4 hover:border-primary">
+                  <h3 className="font-bold">{s.label}のまとめ</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-muted">
+                    {s.digests.map((d) => (
+                      <li key={d.kind}>
+                        {d.kind === "議案" ? "議案" : "質問"}：{d.headline}
+                      </li>
+                    ))}
+                  </ul>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <div className="mb-3 flex items-baseline justify-between">

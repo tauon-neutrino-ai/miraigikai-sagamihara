@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 const NAV = [
+  { href: "/sessions", label: "会議のまとめ" },
   { href: "/bills", label: "議案" },
   { href: "/questions", label: "一般質問・代表質問" },
   { href: "/members", label: "議員" },

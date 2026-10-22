@@ -100,3 +100,27 @@ export type Legislation = {
   source_url: string | null;
   leaders: { role: string; member: Pick<Member, "id" | "display_name"> }[];
 };
+
+export type BillDigestItem = { title: string; description: string; bill_ids: number[]; contested: boolean };
+export type QuestionDigestItem = {
+  theme: string;
+  field: Field;
+  description: string;
+  response: string;
+  question_ids: number[];
+};
+
+/** 会議ごとのまとめ（AI が議案・質問の要約から作る） */
+export type SessionDigest = {
+  kind: "議案" | "質問";
+  headline: string;
+  overview: string;
+  items: (BillDigestItem | QuestionDigestItem)[];
+  updated_at: string;
+};
+
+export type SessionSummary = Session & {
+  billCount: number;
+  questionCount: number;
+  digests: Pick<SessionDigest, "kind" | "headline">[];
+};
