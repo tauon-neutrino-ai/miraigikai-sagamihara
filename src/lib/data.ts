@@ -158,7 +158,7 @@ export async function getSessionSummaries(): Promise<SessionSummary[]> {
   if (!sb) return [];
   const [sessions, bills, questions, digests] = await Promise.all([
     sb.from("sessions").select("id, year, name, label, start_date"),
-    sb.from("bills").select("session_id"),
+    sb.from("bills").select("session_id, decided_on"),
     sb.from("general_questions").select("session_id"),
     sb.from("session_digests").select("session_id, kind, headline"),
   ]);
@@ -167,7 +167,13 @@ export async function getSessionSummaries(): Promise<SessionSummary[]> {
   if (questions.error) fail("questions", questions.error);
   if (digests.error) fail("session_digests", digests.error);
   const count = (rows: { session_id: number | null }[], id: number) => rows.filter((r) => r.session_id === id).length;
-  return sortSessionsDesc(sessions.data as Session[])
+  // 開会日のない会議は、議案の議決日で並べる
+  const decided = (id: number) =>
+    (bills.data as { session_id: number | null; decided_on: string | null }[])
+      .filter((b) => b.session_id === id && b.decided_on)
+      .map((b) => b.decided_on as string)
+      .sort()[0] ?? null;
+  return sortSessionsDesc((sessions.data as Session[]).map((s) => ({ ...s, decided_on: decided(s.id) })))
     .map((s) => ({
       ...s,
       billCount: count(bills.data, s.id),
