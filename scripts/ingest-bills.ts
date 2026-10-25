@@ -184,6 +184,15 @@ async function ingestBills(since: number, opts: Opts) {
           if (!noDb && !opts.force) {
             const done = must(await db.from("bills").select("id").eq("source_url", link.url).limit(1), "select bills");
             if (done.length) continue;
+            // 画像だけの PDF を会議録から補った場合など、リンクの番号の議案がすべて入っていれば飛ばす
+            const { kind, numbers } = linkBillNumbers(link.text);
+            if (numbers.length) {
+              const have = must(
+                await db.from("bills").select("number").eq("year", year).eq("bill_kind", kind).in("number", numbers),
+                "select bill numbers",
+              );
+              if (have.length === numbers.length) continue;
+            }
           }
           const { text, hash } = await pdfText(link.url);
           // 紙をスキャンした画像だけの PDF は文字が取れないので、AI を呼ばずに知らせる
@@ -292,3 +301,16 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+/** リンクの文字「議案第113号～119号」「議案第38号〜41号、83号」から、種類と議案番号を読む */
+function linkBillNumbers(text: string): { kind: "市長提出" | "議員提出" | "委員会提出"; numbers: number[] } {
+  const t = toHankaku(text).replace(/\[PDF[^\]]*\]/g, "").replace(/（[^）]*）/g, "");
+  const kind = t.startsWith("議提") ? "議員提出" : t.startsWith("委員会提出") ? "委員会提出" : "市長提出";
+  const numbers: number[] = [];
+  for (const m of t.matchAll(/(\d+)号?\s*(?:[〜～~\-－]\s*第?(\d+)号?)?/g)) {
+    const a = Number(m[1]);
+    const b = m[2] ? Number(m[2]) : a;
+    for (let n = a; n <= b && n - a < 200; n++) numbers.push(n);
+  }
+  return { kind, numbers: [...new Set(numbers)] };
+}
