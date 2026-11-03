@@ -21,6 +21,8 @@ const ThemeConfig = z.object({
   keywords: z.array(z.string()).min(1),
   questions: z.array(z.string()),
   stances: z.array(z.string()).min(2),
+  // AI への注意書き（例: 同じ言葉で別の話題を拾いやすいときに、除くものを書く）
+  note: z.string().optional(),
 });
 type ThemeConfig = z.infer<typeof ThemeConfig>;
 
@@ -58,7 +60,7 @@ function themeSchema(cfg: ThemeConfig) {
           refs: Ref,
         }),
       )
-      .describe("このテーマを取り上げた議員全員。発言内容から立場を判断し、はっきりしなければ最後の選択肢にする"),
+      .describe("このテーマを取り上げた議員全員を1人1項目で。発言内容から立場を判断し、はっきりしなければ最後の選択肢にする。時期によって立場が変わった議員は最新の立場を選び、summary に変化を書く"),
     open_issues: z.array(z.string()).describe("まだ決まっていないこと・今後の注目点（2〜5個）"),
   });
 }
@@ -130,6 +132,7 @@ async function build(cfg: ThemeConfig, opts: { dryRun: boolean; preview: boolean
     system: SYSTEM,
     prompt:
       `テーマ「${cfg.title}」（${cfg.description ?? ""}）について、次の疑問に答えるページを作ってください。\n` +
+      (cfg.note ? `注意: ${cfg.note}\n` : "") +
       cfg.questions.map((q) => `- ${q}`).join("\n") +
       `\n\n議員の立場は次から選んでください: ${cfg.stances.join(" / ")}\n\n` +
       `以下が材料です（Q は一般質問・代表質問の会議録の関係部分、B は議案の要約）。\n\n${text}`,
@@ -166,7 +169,7 @@ async function linkMembers<T extends { name: string; refs: string[] }>(list: T[]
   const members = must(await db.from("members").select("id, name, display_name"), "select members");
   const qids = list.flatMap((m) => m.refs.filter((r) => r.startsWith("Q")).map((r) => Number(r.slice(1))));
   const qs = must(await db.from("general_questions").select("id, member_id").in("id", qids.length ? qids : [0]), "select refs");
-  return list.map((m) => {
+  const linked = list.map((m) => {
     let member = members.find((x) => x.name === normalizeName(m.name));
     if (!member) {
       const fromRefs = m.refs.map((r) => qs.find((q) => `Q${q.id}` === r)?.member_id).find(Boolean);
@@ -174,6 +177,14 @@ async function linkMembers<T extends { name: string; refs: string[] }>(list: T[]
     }
     return { ...m, name: member ? member.display_name.replace(/\s+/g, "") : m.name, member_id: member?.id ?? null };
   });
+  // 同じ議員が2回出てきたら1つにまとめる（立場は最初の項目、根拠はすべて残す）
+  const merged: typeof linked = [];
+  for (const m of linked) {
+    const same = merged.find((x) => (x.member_id ?? x.name) === (m.member_id ?? m.name));
+    if (same) same.refs = [...new Set([...same.refs, ...m.refs])];
+    else merged.push({ ...m });
+  }
+  return merged;
 }
 
 async function main() {
