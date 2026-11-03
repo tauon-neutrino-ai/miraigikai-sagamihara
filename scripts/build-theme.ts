@@ -41,7 +41,7 @@ function excerpt(text: string, kw: RegExp): string {
 function themeSchema(cfg: ThemeConfig) {
   const Ref = z.array(z.string()).describe("根拠にした材料の番号（例: Q12, B34）");
   return z.object({
-    headline: z.string().describe("このテーマの今を一言で表す見出し（40字以内）"),
+    headline: z.string().describe("このテーマの今を一言で表す見出し（40字以内）。報道や見込みなど不確かなことは言い切らない"),
     overview: z.string().describe("テーマの全体像。何が問題で、これまでどんな議論があったか（300〜500字）"),
     current_status: z.string().describe("いまどうなっているか。最新の市の方針・予定（150〜300字）"),
     current_status_refs: Ref,
@@ -140,7 +140,7 @@ async function build(cfg: ThemeConfig, opts: { dryRun: boolean; preview: boolean
   });
   if (opts.preview) return console.log(JSON.stringify(r, null, 2));
 
-  const content = { ...r, members: await linkMembers(r.members) };
+  const content = { ...r, timeline: sortTimeline(r.timeline), members: await linkMembers(r.members) };
   must(
     await db.from("themes").upsert(
       {
@@ -193,12 +193,13 @@ async function main() {
   const targets = args.all ? all : all.filter((t) => t.slug === args.slug);
   if (targets.length === 0) throw new Error("--slug=テーマのslug（data/themes.json）か --all を指定してください");
   const opts = { dryRun: Boolean(args["dry-run"]), preview: Boolean(args.preview), force: Boolean(args.force) };
-  // --relink: AI を呼ばずに、保存済みのテーマの議員の結びつけだけやり直す
+  // --relink: AI を呼ばずに、保存済みのテーマの議員の結びつけと経緯の並び順だけやり直す
   if (args.relink) {
     for (const t of targets) {
       const row = must(await db.from("themes").select("content").eq("slug", t.slug).single(), "select theme");
       const c = row.content as { members: { name: string; refs: string[] }[] };
-      must(await db.from("themes").update({ content: { ...c, members: await linkMembers(c.members) } }).eq("slug", t.slug), "relink");
+      const fixed = { ...c, timeline: sortTimeline((c as { timeline?: { date: string }[] }).timeline ?? []), members: await linkMembers(c.members) };
+      must(await db.from("themes").update({ content: fixed }).eq("slug", t.slug), "relink");
       console.log(`  ✓ ${t.title}: 議員の結びつけをやり直しました`);
     }
     return;
@@ -218,3 +219,12 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+/** 経緯を日付順に並べる（「2023年1月〜8月」なら2023年1月として扱う。年がないものは元の順のまま最後に） */
+function sortTimeline<T extends { date: string }>(list: T[]): T[] {
+  const key = (d: string) => {
+    const m = d.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).match(/(\d{4})年(?:度)?(?:\s*(\d{1,2})月)?/);
+    return m ? Number(m[1]) * 100 + (m[2] ? Number(m[2]) : 0) : Number.MAX_SAFE_INTEGER;
+  };
+  return list.map((t, i) => ({ t, i })).sort((a, b) => key(a.t.date) - key(b.t.date) || a.i - b.i).map((x) => x.t);
+}
