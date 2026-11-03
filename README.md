@@ -159,3 +159,14 @@ npm run digest -- --latest --preview             # 保存せずに試す
 
 一般質問・代表質問は、今の任期（2023年5月の改選後）だけを載せています。改選前の質問には今はいない議員も多いためです。
 `ingest:questions` は `--since` を付けなければ 2023年5月以降の会議だけを取り込みます（議案は改選前の分も載せています）。
+
+## テーマ深掘り（手動）
+
+気になるテーマ（例: アイススケート場問題）について、会議録の一般質問・代表質問の関係部分と議案から、
+経緯・現在の状況・疑問への答え・関心のある議員と立場をまとめたページを作ります。
+
+1. `data/themes.json` にテーマを書く（`slug`・`title`・探す言葉 `keywords`・答えたい疑問 `questions`・議員の立場の分け方 `stances`）
+2. `npm run theme -- --slug=skate --dry-run` で集まる材料の量を確認
+3. `npm run theme -- --slug=skate` で作る（材料が変わっていなければ AI を呼ばない。`--all` で全テーマ）
+
+初めて使うときは、Supabase の SQL Editor で `supabase/migrations/20261103000000_themes.sql` を実行しておいてください。

@@ -124,3 +124,26 @@ export type SessionSummary = Session & {
   questionCount: number;
   digests: Pick<SessionDigest, "kind" | "headline">[];
 };
+
+/** テーマ深掘りページの中身（AI が議案と会議録からまとめる） */
+export type ThemeContent = {
+  headline: string;
+  overview: string;
+  current_status: string;
+  current_status_refs: string[];
+  faq: { question: string; answer: string; refs: string[] }[];
+  timeline: { date: string; event: string; refs: string[] }[];
+  members: { name: string; member_id: number | null; stance: string; summary: string; refs: string[] }[];
+  open_issues: string[];
+};
+
+export type Theme = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  content: ThemeContent;
+  question_ids: number[];
+  bill_ids: number[];
+  updated_at: string;
+};

@@ -15,7 +15,8 @@
     "sync:chairs": "tsx scripts/sync-chairs.ts",
     "recompute:scores": "tsx scripts/recompute-scores.ts",
     "ingest:bills-minutes": "tsx scripts/ingest-bills-from-minutes.ts",
-    "digest": "tsx scripts/digest-session.ts"
+    "digest": "tsx scripts/digest-session.ts",
+    "theme": "tsx scripts/build-theme.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

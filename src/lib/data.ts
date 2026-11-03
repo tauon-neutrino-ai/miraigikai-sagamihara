@@ -14,6 +14,7 @@ import type {
   Session,
   SessionDigest,
   SessionSummary,
+  Theme,
 } from "./types";
 
 const BILL_COLUMNS =
@@ -216,5 +217,46 @@ export async function getSessionDetail(id: number): Promise<{
     digests: digests.data as SessionDigest[],
     bills: bills.data as Pick<Bill, "id" | "bill_kind" | "number" | "title" | "result">[],
     questions: questions.data as unknown as Pick<GeneralQuestion, "id" | "question_type" | "title" | "member">[],
+  };
+}
+
+/** テーマ深掘りの一覧 */
+export async function getThemes(): Promise<Pick<Theme, "id" | "slug" | "title" | "description" | "content" | "updated_at">[]> {
+  "use cache";
+  cacheLife("hours");
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.from("themes").select("id, slug, title, description, content, updated_at").order("updated_at", { ascending: false });
+  if (error) fail("themes", error);
+  return data as Pick<Theme, "id" | "slug" | "title" | "description" | "content" | "updated_at">[];
+}
+
+/** テーマ深掘りのページ用: テーマと、根拠にした質問・議案（リンク表示用） */
+export async function getTheme(slug: string): Promise<{
+  theme: Theme;
+  questions: Pick<GeneralQuestion, "id" | "question_type" | "meeting_date" | "title" | "member">[];
+  bills: Pick<Bill, "id" | "bill_kind" | "number" | "year" | "title" | "result">[];
+} | null> {
+  "use cache";
+  cacheLife("hours");
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data: theme, error } = await sb.from("themes").select("*").eq("slug", slug).maybeSingle();
+  if (error) fail("theme", error);
+  if (!theme) return null;
+  const t = theme as Theme;
+  const [questions, bills] = await Promise.all([
+    sb
+      .from("general_questions")
+      .select("id, question_type, meeting_date, title, member:members(id, display_name, faction)")
+      .in("id", t.question_ids.length ? t.question_ids : [0]),
+    sb.from("bills").select("id, bill_kind, number, year, title, result").in("id", t.bill_ids.length ? t.bill_ids : [0]),
+  ]);
+  if (questions.error) fail("theme questions", questions.error);
+  if (bills.error) fail("theme bills", bills.error);
+  return {
+    theme: t,
+    questions: questions.data as unknown as Pick<GeneralQuestion, "id" | "question_type" | "meeting_date" | "title" | "member">[],
+    bills: bills.data as Pick<Bill, "id" | "bill_kind" | "number" | "year" | "title" | "result">[],
   };
 }
