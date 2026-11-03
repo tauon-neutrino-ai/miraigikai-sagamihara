@@ -21,6 +21,8 @@ const ThemeConfig = z.object({
   keywords: z.array(z.string()).min(1),
   questions: z.array(z.string()),
   stances: z.array(z.string()).min(2),
+  // 範囲の広いテーマ（例: 教育）は、会議録ではなく質問項目の要約のうち、この分野のものを材料にする
+  fields: z.array(z.string()).optional(),
   // AI への注意書き（例: 同じ言葉で別の話題を拾いやすいときに、除くものを書く）
   note: z.string().optional(),
 });
@@ -77,40 +79,62 @@ async function build(cfg: ThemeConfig, opts: { dryRun: boolean; preview: boolean
   const kw = new RegExp(cfg.keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"));
   console.log(`${cfg.title}（探す言葉: ${cfg.keywords.join("・")}）`);
 
-  // 取り込み済みの質問を会議録から読み直し、キーワードを含む部分を集める
   const qs = must(
     await db
       .from("general_questions")
-      .select("id, question_type, meeting_date, kaigiroku_council_id, kaigiroku_schedule_id, first_minute_id, member:members(name, display_name)")
+      .select(
+        "id, question_type, meeting_date, topics, kaigiroku_council_id, kaigiroku_schedule_id, first_minute_id, member:members(name, display_name)",
+      )
       .order("meeting_date"),
     "select questions",
   );
-  const byDay = new Map<string, typeof qs>();
-  for (const q of qs) {
-    const key = `${q.kaigiroku_council_id}:${q.kaigiroku_schedule_id}`;
-    byDay.set(key, [...(byDay.get(key) ?? []), q]);
-  }
+  const header = (q: (typeof qs)[number]) => {
+    const m = q.member as unknown as { display_name: string } | null;
+    return `${q.meeting_date} ${q.question_type} ${m?.display_name.replace(/\s+/g, "") ?? ""}議員`;
+  };
   const materials: { ref: string; id: number; header: string; body: string }[] = [];
-  for (const [key, list] of byDay) {
-    const [councilId, scheduleId] = key.split(":").map(Number);
-    const segs = segmentQuestions(await getMinutes(councilId, scheduleId));
-    for (const q of list) {
-      const seg = segs.find((s) => s.firstMinuteId === q.first_minute_id);
-      if (!seg || !kw.test(seg.text)) continue;
-      const m = q.member as unknown as { display_name: string } | null;
+
+  if (cfg.fields?.length) {
+    // 範囲の広いテーマ: 質問項目ごとの要約のうち、分野が合い、探す言葉を含む項目を集める
+    type Topic = { title: string; field: string; question: string; answer: string; outcome: string };
+    for (const q of qs) {
+      const hits = (q.topics as Topic[]).filter(
+        (t) => cfg.fields!.includes(t.field) && kw.test(`${t.title}${t.question}${t.answer}`),
+      );
+      if (hits.length === 0) continue;
       materials.push({
         ref: `Q${q.id}`,
         id: q.id,
-        header: `${q.meeting_date} ${q.question_type} ${m?.display_name.replace(/\s+/g, "") ?? ""}議員`,
-        body: excerpt(seg.text, kw),
+        header: header(q),
+        body: hits.map((t) => `・${t.title}: 【質問】${t.question} 【市の答え】${t.answer}（${t.outcome}）`).join("\n"),
       });
+    }
+  } else {
+    // 話題のはっきりしたテーマ: 会議録を読み直し、探す言葉を含む発言を集める
+    const byDay = new Map<string, typeof qs>();
+    for (const q of qs) {
+      const key = `${q.kaigiroku_council_id}:${q.kaigiroku_schedule_id}`;
+      byDay.set(key, [...(byDay.get(key) ?? []), q]);
+    }
+    for (const [key, list] of byDay) {
+      const [councilId, scheduleId] = key.split(":").map(Number);
+      const segs = segmentQuestions(await getMinutes(councilId, scheduleId));
+      for (const q of list) {
+        const seg = segs.find((s) => s.firstMinuteId === q.first_minute_id);
+        if (!seg || !kw.test(seg.text)) continue;
+        materials.push({ ref: `Q${q.id}`, id: q.id, header: header(q), body: excerpt(seg.text, kw) });
+      }
     }
   }
 
   const bills = must(
-    await db.from("bills").select("id, bill_kind, number, year, title, summary, background, key_points, result, decided_on"),
+    await db.from("bills").select("id, bill_kind, number, year, title, summary, background, key_points, result, decided_on, fields"),
     "select bills",
-  ).filter((b) => kw.test(`${b.title}${b.summary ?? ""}${b.background ?? ""}${JSON.stringify(b.key_points)}`));
+  ).filter(
+    (b) =>
+      (!cfg.fields?.length || (b.fields as string[]).some((f) => cfg.fields!.includes(f))) &&
+      kw.test(`${b.title}${b.summary ?? ""}${b.background ?? ""}${JSON.stringify(b.key_points)}`),
+  );
 
   const text = [
     ...materials.map((m) => `===== [${m.ref}] ${m.header} =====\n${m.body}`),
@@ -223,7 +247,7 @@ main().catch((e) => {
 /** 経緯を日付順に並べる（「2023年1月〜8月」なら2023年1月として扱う。年がないものは元の順のまま最後に） */
 function sortTimeline<T extends { date: string }>(list: T[]): T[] {
   const key = (d: string) => {
-    const m = d.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).match(/(\d{4})年(?:度)?(?:\s*(\d{1,2})月)?/);
+    const m = d.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).match(/(\d{4})年(?:度)?(?:\s*(\d{1,2})(?:[〜～~\-－]\d{1,2})?月)?/);
     return m ? Number(m[1]) * 100 + (m[2] ? Number(m[2]) : 0) : Number.MAX_SAFE_INTEGER;
   };
   return list.map((t, i) => ({ t, i })).sort((a, b) => key(a.t.date) - key(b.t.date) || a.i - b.i).map((x) => x.t);
