@@ -137,12 +137,7 @@ async function build(cfg: ThemeConfig, opts: { dryRun: boolean; preview: boolean
   });
   if (opts.preview) return console.log(JSON.stringify(r, null, 2));
 
-  // 議員名をサイトの議員に結びつける
-  const members = must(await db.from("members").select("id, name"), "select members");
-  const content = {
-    ...r,
-    members: r.members.map((m) => ({ ...m, member_id: members.find((x) => x.name === normalizeName(m.name))?.id ?? null })),
-  };
+  const content = { ...r, members: await linkMembers(r.members) };
   must(
     await db.from("themes").upsert(
       {
@@ -163,12 +158,40 @@ async function build(cfg: ThemeConfig, opts: { dryRun: boolean; preview: boolean
   console.log(`  ✓ 「${r.headline}」（議員 ${r.members.length} 人・経緯 ${r.timeline.length} 項目）`);
 }
 
+/**
+ * AI が書いた議員名をサイトの議員に結びつける。名前が一致しなければ（書き間違いなど）、
+ * 根拠に挙げた質問（Q○○）の議員を使う。表示名は名簿の表記にそろえる。
+ */
+async function linkMembers<T extends { name: string; refs: string[] }>(list: T[]) {
+  const members = must(await db.from("members").select("id, name, display_name"), "select members");
+  const qids = list.flatMap((m) => m.refs.filter((r) => r.startsWith("Q")).map((r) => Number(r.slice(1))));
+  const qs = must(await db.from("general_questions").select("id, member_id").in("id", qids.length ? qids : [0]), "select refs");
+  return list.map((m) => {
+    let member = members.find((x) => x.name === normalizeName(m.name));
+    if (!member) {
+      const fromRefs = m.refs.map((r) => qs.find((q) => `Q${q.id}` === r)?.member_id).find(Boolean);
+      member = members.find((x) => x.id === fromRefs);
+    }
+    return { ...m, name: member ? member.display_name.replace(/\s+/g, "") : m.name, member_id: member?.id ?? null };
+  });
+}
+
 async function main() {
   const args = parseArgs();
   const all = z.array(ThemeConfig).parse(JSON.parse(readFileSync("data/themes.json", "utf8")));
   const targets = args.all ? all : all.filter((t) => t.slug === args.slug);
   if (targets.length === 0) throw new Error("--slug=テーマのslug（data/themes.json）か --all を指定してください");
   const opts = { dryRun: Boolean(args["dry-run"]), preview: Boolean(args.preview), force: Boolean(args.force) };
+  // --relink: AI を呼ばずに、保存済みのテーマの議員の結びつけだけやり直す
+  if (args.relink) {
+    for (const t of targets) {
+      const row = must(await db.from("themes").select("content").eq("slug", t.slug).single(), "select theme");
+      const c = row.content as { members: { name: string; refs: string[] }[] };
+      must(await db.from("themes").update({ content: { ...c, members: await linkMembers(c.members) } }).eq("slug", t.slug), "relink");
+      console.log(`  ✓ ${t.title}: 議員の結びつけをやり直しました`);
+    }
+    return;
+  }
   for (const t of targets) {
     try {
       await build(t, opts);
