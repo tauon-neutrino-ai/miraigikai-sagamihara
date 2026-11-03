@@ -226,7 +226,8 @@ export async function getThemes(): Promise<Pick<Theme, "id" | "slug" | "title" |
   cacheLife("hours");
   const sb = getSupabase();
   if (!sb) return [];
-  const { data, error } = await sb.from("themes").select("id, slug, title, description, content, updated_at").order("updated_at", { ascending: false });
+  // 作った順（最初に作ったテーマを上に）
+  const { data, error } = await sb.from("themes").select("id, slug, title, description, content, updated_at").order("created_at", { ascending: true });
   if (error) fail("themes", error);
   return data as Pick<Theme, "id" | "slug" | "title" | "description" | "content" | "updated_at">[];
 }

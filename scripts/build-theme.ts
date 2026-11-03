@@ -248,7 +248,9 @@ main().catch((e) => {
 function sortTimeline<T extends { date: string }>(list: T[]): T[] {
   const key = (d: string) => {
     const m = d.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).match(/(\d{4})年(?:度)?(?:\s*(\d{1,2})(?:[〜～~\-－]\d{1,2})?月)?/);
-    return m ? Number(m[1]) * 100 + (m[2] ? Number(m[2]) : 0) : Number.MAX_SAFE_INTEGER;
+    // 月のない「○年度」は年度の始まり（4月）として扱う
+    const month = m?.[2] ? Number(m[2]) : /年度/.test(d) ? 4 : 0;
+    return m ? Number(m[1]) * 100 + month : Number.MAX_SAFE_INTEGER;
   };
   return list.map((t, i) => ({ t, i })).sort((a, b) => key(a.t.date) - key(b.t.date) || a.i - b.i).map((x) => x.t);
 }
