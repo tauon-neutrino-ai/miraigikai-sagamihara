@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ScoreBreakdown } from "@/components/charts";
-import { BackLink, Badge, Card, FieldTag, ScorePill, formatDate } from "@/components/ui";
+import { BackLink, Badge, Card, FieldTag, ScoreNotice, ScorePill, formatDate } from "@/components/ui";
 import { getQuestion } from "@/lib/data";
 
 export async function generateMetadata({ params }: PageProps<"/questions/[id]">): Promise<Metadata> {
@@ -96,6 +96,7 @@ async function QuestionDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <section>
         <h2 className="mb-3 text-lg font-bold">質問の評価</h2>
+        <ScoreNotice className="mb-3" />
         <Card className="space-y-5">
           <div className="flex items-center gap-3">
             <ScorePill score={q.score_total} />

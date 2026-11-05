@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { FieldBars, ScoreBreakdown } from "@/components/charts";
 import { QuestionCard } from "@/components/question-card";
-import { BackLink, Badge, Card, ScorePill } from "@/components/ui";
+import { BackLink, Badge, Card, ScorePill, ScoreNotice } from "@/components/ui";
 import { SCORE_CRITERIA, type ScoreKey } from "@/lib/constants";
 import { getMemberDetail } from "@/lib/data";
 
@@ -86,6 +86,7 @@ async function MemberDetail({ params }: { params: Promise<{ id: string }> }) {
         </Card>
         <Card>
           <h2 className="mb-3 font-bold">質問の評価（平均）</h2>
+          <ScoreNotice className="mb-3" />
           {scored.length ? <ScoreBreakdown scores={avgScores} /> : <p className="text-sm text-muted">まだデータがありません。</p>}
         </Card>
       </div>

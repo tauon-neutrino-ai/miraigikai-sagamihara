@@ -92,3 +92,16 @@ export function billLabel(b: { bill_kind: string; number: number }): string {
   if (b.bill_kind === "委員会提出") return `委員会提出議案第${b.number}号`;
   return `議案第${b.number}号`;
 }
+
+/** 点数を表示するところに置く注意書き（評価の観点は「このサイトについて」に書いてある） */
+export function ScoreNotice({ className = "" }: { className?: string }) {
+  return (
+    <p className={`rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted ${className}`}>
+      今回の点数付けの観点は
+      <Link href="/about#scoring" className="mx-0.5 text-primary underline">
+        「このサイトについて」
+      </Link>
+      に書かれています。評価は人によって変わります。ぜひ質疑の内容をよく読んで、ご自身の価値基準で判断してください。
+    </p>
+  );
+}

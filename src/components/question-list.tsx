@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { FIELDS } from "@/lib/constants";
 import type { GeneralQuestion } from "@/lib/types";
 import { QuestionCard } from "./question-card";
+import { ScoreNotice } from "./ui";
 
 const SORTS = { date: "新しい順", high: "評価の高い順", low: "評価の低い順" } as const;
 
@@ -72,6 +73,7 @@ export function QuestionList({ questions }: { questions: GeneralQuestion[] }) {
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
+      <ScoreNotice className="mb-3" />
       <p className="mb-3 text-xs text-muted">{filtered.length} 件</p>
       <ul className="space-y-3">
         {filtered.slice(0, 200).map((q) => (
