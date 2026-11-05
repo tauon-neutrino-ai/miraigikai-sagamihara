@@ -51,6 +51,30 @@ export default function AboutPage() {
         </ul>
       </section>
 
+      <section id="references" className="scroll-mt-4">
+        <h2 className="mb-2 text-xl font-bold">評価基準と関係する考え方・文献</h2>
+        <p className="mb-4 text-sm text-muted">
+          上の評価基準は、これらの文献をもとに作ったものではありません。基準を設定したあとで、同じような考え方が示されている条例や研究を照らし合わせ、参考として紹介しています。
+        </p>
+        <div className="space-y-3">
+          {REFERENCES.map((r) => (
+            <Card key={r.title}>
+              <p className="text-sm font-bold">
+                {r.url ? (
+                  <a href={r.url} className="text-primary underline" target="_blank" rel="noreferrer">
+                    {r.title}
+                  </a>
+                ) : (
+                  r.title
+                )}
+              </p>
+              <p className="mt-1 text-xs text-muted">{r.source}</p>
+              <p className="mt-2 text-sm">{r.relation}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       <section>
         <h2 className="mb-3 text-xl font-bold">議長経験・議員立法について</h2>
         <ul className="list-disc space-y-1 pl-6 text-sm">
@@ -76,3 +100,42 @@ export default function AboutPage() {
     </div>
   );
 }
+
+/** 評価基準と関係する条例・研究（基準を作ったあとで照らし合わせたもの。内容は原文で確認済み） */
+const REFERENCES = [
+  {
+    title: "相模原市議会基本条例",
+    source: "相模原市議会（平成26年7月1日施行）",
+    url: "https://www.sagamihara-shigikai.jp/doc/2014051200010/",
+    relation:
+      "第5条で、議員の活動原則として「市長等の事務の執行について監視及び評価をし、的確な政策提言を行う」「日々の調査研究の成果を議会活動に反映させる」「常に市民意見の把握に努める」こと、また「市民全体の利益を念頭に置く」ことを定めています（評価基準の「建設的な意見」「具体性・根拠」「市民への関わり」に対応）。第20条では、質問と答弁を「分かりやすく行う」としています。",
+  },
+  {
+    title: "本田正美「地方議員の活動評価と情報公開基盤の必要性」",
+    source: "東京大学大学院情報学環紀要『情報学研究』No.88",
+    url: "https://www.iii.u-tokyo.ac.jp/manage/wp-content/uploads/2018/04/88_2.pdf",
+    relation:
+      "議員の一般質問を評価する試みで、大村市議会基本条例第9条の7つの論点（政策の発生源、提案に至るまでの経緯、他の自治体の類似する政策との比較検討、市民参加、総合計画との整合性、財源措置及び将来にわたるコスト計算、政策の効果）を評価の軸としています（「具体性・根拠」「費用対効果の考え」に対応）。答弁をどれだけ引き出せたかの評価を今後の課題とし（「成果」に対応）、議員の活動を評価すべきなのは地域の住民であるとしています。",
+  },
+  {
+    title: "上瀬裕美「地方議会における一般質問の研究」",
+    source: "京都大学（公共政策大学院のサイトで公開）",
+    url: "https://www.sg.kyoto-u.ac.jp/sg/wp-content/uploads/2021/07/6536b9d98e0684721a7b108cdf7f5080-1.pdf",
+    relation:
+      "一般質問は、監査機能と政策提案機能を果たし、執行機関の公式見解を引き出す重要な場であるという指摘（土山 2016）を紹介しています（「建設的な意見」「成果」に対応）。",
+  },
+  {
+    title: "Bull, P. & Mayer, K. “How not to answer questions in political interviews”",
+    source: "Political Psychology, 14(4), 651–666 (1993)",
+    url: "https://pure.york.ac.uk/portal/en/publications/how-not-to-answer-questions-in-political-interviews",
+    relation:
+      "政治家が質問に正面から答えずにかわす方法を分類した研究です。質問に対して実質的な答えが得られたかどうかを見る、という「成果」の考え方に近いものです。",
+  },
+  {
+    title: "Bates, S. R., Kerr, P., Byrne, C. & Stanley, L. “Questions to the Prime Minister: A Comparative Study of PMQs from Thatcher to Cameron”",
+    source: "Parliamentary Affairs, 67(2), 253–280 (2014)",
+    url: "https://eprints.leedsbeckett.ac.uk/id/eprint/6608/",
+    relation:
+      "英国議会の首相への質問（PMQs）について、議会による監視が浅い点数稼ぎの場になっていないかを、質問の性質（答えを引き出しやすい質問か、答えようのない質問か など）を分類して比べた研究です。質問の中身そのものを見て評価するという考え方の参考として紹介しています。",
+  },
+];
